@@ -18,11 +18,11 @@ interface FileUploadProps {
 }
 
 const FILE_CATEGORIES: { value: FileCategory; label: string }[] = [
-  { value: 'furniture', label: 'Furniture' },
-  { value: 'lighting', label: 'Lighting' },
-  { value: 'textiles', label: 'Textiles' },
-  { value: 'accessories', label: 'Accessories' },
-  { value: 'finishes', label: 'Finishes' },
+  { value: 'plans', label: 'Plans' },
+  { value: 'work_drawings', label: 'Work Drawings' },
+  { value: '3d', label: '3D' },
+  { value: 'wip', label: 'WIP' },
+  { value: 'finished', label: 'Finished' },
 ];
 
 export const FileUpload: React.FC<FileUploadProps> = ({
@@ -33,7 +33,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   defaultCategory,
 }) => {
   const [selectedSiteId, setSelectedSiteId] = useState(defaultSiteId || '');
-  const [selectedCategory, setSelectedCategory] = useState<FileCategory>(defaultCategory || 'furniture');
+  const [selectedCategory, setSelectedCategory] = useState<FileCategory>(defaultCategory || 'plans');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { uploadableSites } = useSites();

@@ -17,8 +17,8 @@ export function formatFileSize(bytes: number): string {
 }
 
 // Format date
-export function formatDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
+export function formatDate(date: Date | string | number): string {
+  const d = date instanceof Date ? date : typeof date === 'number' ? new Date(date) : new Date(date)
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -27,8 +27,8 @@ export function formatDate(date: Date | string): string {
 }
 
 // Format date with time
-export function formatDateTime(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
+export function formatDateTime(date: Date | string | number): string {
+  const d = date instanceof Date ? date : typeof date === 'number' ? new Date(date) : new Date(date)
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -39,8 +39,8 @@ export function formatDateTime(date: Date | string): string {
 }
 
 // Get relative time (e.g., "2 hours ago")
-export function getRelativeTime(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
+export function getRelativeTime(date: Date | string | number): string {
+  const d = date instanceof Date ? date : typeof date === 'number' ? new Date(date) : new Date(date)
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()
   const diffSecs = Math.floor(diffMs / 1000)
@@ -351,4 +351,23 @@ export async function retryWithBackoff<T>(
   }
   
   throw lastError!
+}
+
+// Format file category labels
+export function formatCategoryLabel(category: string): string {
+  switch (category) {
+    case 'plans':
+      return 'Plans';
+    case 'work_drawings':
+      return 'Work Drawings';
+    case '3d':
+      return '3D';
+    case 'wip':
+      return 'WIP';
+    case 'finished':
+      return 'Finished';
+    default:
+      // Fallback: capitalize words
+      return category.split('_').map(capitalize).join(' ');
+  }
 }

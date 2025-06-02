@@ -22,7 +22,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { SimpleModal } from './ui/modal';
 import { trpc } from '@/lib/trpc';
-import { formatFileSize, formatDate, formatDateTime, cn } from '@/lib/utils';
+import { formatFileSize, formatDate, formatDateTime, cn, formatCategoryLabel } from '@/lib/utils';
 import type { FileWithDetails, FileCategory } from '@/types';
 
 interface FileGridProps {
@@ -445,7 +445,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
                     </div>
                     <div className="flex items-center">
                       <Folder className="w-3 h-3 mr-1" />
-                      {file.category}
+                      {formatCategoryLabel(file.category)}
                     </div>
                   </div>
 
@@ -539,7 +539,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
                     {getFileIcon(file)}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{file.originalName}</p>
-                      <p className="text-xs text-gray-500">{file.category}</p>
+                      <p className="text-xs text-gray-500">{formatCategoryLabel(file.category)}</p>
                     </div>
                   </div>
 
@@ -638,7 +638,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div><span className="font-medium">Name:</span> {selectedFile.originalName}</div>
               <div><span className="font-medium">Size:</span> {formatFileSize(selectedFile.size)}</div>
-              <div><span className="font-medium">Category:</span> {selectedFile.category}</div>
+              <div><span className="font-medium">Category:</span> {formatCategoryLabel(selectedFile.category)}</div>
               <div><span className="font-medium">Type:</span> {selectedFile.mimeType}</div>
               <div><span className="font-medium">Uploaded:</span> {formatDateTime(selectedFile.createdAt)}</div>
               <div><span className="font-medium">Status:</span> 

@@ -7,7 +7,7 @@ import { SimpleModal } from './ui/modal';
 import { useSearch } from '@/hooks/useSearch';
 import { useSites } from '@/hooks/useSites';
 import { trpc } from '@/lib/trpc';
-import { formatFileSize, formatDate, cn } from '@/lib/utils';
+import { formatFileSize, formatDate, cn, formatCategoryLabel } from '@/lib/utils';
 import type { FileCategory, FileWithDetails } from '@/types';
 
 interface SearchInterfaceProps {
@@ -18,11 +18,11 @@ interface SearchInterfaceProps {
 }
 
 const FILE_CATEGORIES: { value: FileCategory; label: string }[] = [
-  { value: 'furniture', label: 'Furniture' },
-  { value: 'lighting', label: 'Lighting' },
-  { value: 'textiles', label: 'Textiles' },
-  { value: 'accessories', label: 'Accessories' },
-  { value: 'finishes', label: 'Finishes' },
+  { value: 'plans', label: 'Plans' },
+  { value: 'work_drawings', label: 'Work Drawings' },
+  { value: '3d', label: '3D' },
+  { value: 'wip', label: 'WIP' },
+  { value: 'finished', label: 'Finished' },
 ];
 
 const MIME_TYPE_FILTERS = [
@@ -328,7 +328,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
                       }}
                       className="rounded border-gray-300"
                     />
-                    <span className="text-sm">{category.label}</span>
+                    <span className="text-sm">{formatCategoryLabel(category.value)}</span>
                   </label>
                 ))}
               </div>
@@ -408,7 +408,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
               key={category}
               className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
             >
-              {FILE_CATEGORIES.find(c => c.value === category)?.label}
+              {formatCategoryLabel(category)}
               <button
                 onClick={() => clearFilter('categories', category)}
                 className="ml-1 hover:text-green-600"
@@ -491,7 +491,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
                   )}
 
                   <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                    <span>{file.category}</span>
+                    <span>{formatCategoryLabel(file.category)}</span>
                     <span>{formatDate(file.createdAt)}</span>
                   </div>
 
@@ -569,7 +569,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
                 <span className="font-medium">Size:</span> {formatFileSize(selectedFile.size)}
               </div>
               <div>
-                <span className="font-medium">Category:</span> {selectedFile.category}
+                <span className="font-medium">Category:</span> {formatCategoryLabel(selectedFile.category)}
               </div>
               <div>
                 <span className="font-medium">Uploaded:</span> {formatDate(selectedFile.createdAt)}

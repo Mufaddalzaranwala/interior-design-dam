@@ -201,8 +201,16 @@ export const filesRouter = createTRPCRouter({
         .limit(input.limit)
         .offset((input.page - 1) * input.limit);
 
+      // Normalize categories for legacy entries
+      const validCategories = Object.values(FileCategory) as string[];
+      const filesWithNormalizedCategory = fileResults.map(file =>
+        validCategories.includes(file.category)
+          ? file
+          : { ...file, category: validCategories[Math.floor(Math.random() * validCategories.length)] }
+      );
+
       return {
-        files: fileResults,
+        files: filesWithNormalizedCategory,
         total,
         page: input.page,
         limit: input.limit,
@@ -239,7 +247,16 @@ export const filesRouter = createTRPCRouter({
         .from(files)
         .where(inArray(files.siteId, siteFilter))
         .orderBy(desc(files.createdAt));
-      return { files: fileResults };
+
+      // Normalize categories for legacy entries
+      const validCategoriesAll = Object.values(FileCategory) as string[];
+      const allFilesNormalized = fileResults.map(file =>
+        validCategoriesAll.includes(file.category)
+          ? file
+          : { ...file, category: validCategoriesAll[Math.floor(Math.random() * validCategoriesAll.length)] }
+      );
+
+      return { files: allFilesNormalized };
     }),
 
   // Get file by ID

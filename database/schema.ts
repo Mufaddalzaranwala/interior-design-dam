@@ -29,11 +29,11 @@ export const UserRole = {
 
 // File categories enum
 export const FileCategory = {
-  FURNITURE: 'furniture',
-  LIGHTING: 'lighting',
-  TEXTILES: 'textiles',
-  ACCESSORIES: 'accessories',
-  FINISHES: 'finishes'
+  PLANS: 'plans',
+  WORK_DRAWINGS: 'work_drawings',
+  THREE_D: '3d',
+  WIP: 'wip',
+  FINISHED: 'finished'
 } as const;
 
 // File processing status enum
@@ -90,7 +90,7 @@ export const sqliteFiles = sqliteTable('files', {
   originalName: text('original_name').notNull(),
   mimeType: text('mime_type').notNull(),
   size: integer('size').notNull(),
-  category: text('category', { enum: ['furniture', 'lighting', 'textiles', 'accessories', 'finishes'] }).notNull(),
+  category: text('category', { enum: ['plans', 'work_drawings', '3d', 'wip', 'finished'] }).notNull(),
   siteId: text('site_id').notNull().references(() => sqliteSites.id, { onDelete: 'cascade' }),
   uploadedBy: text('uploaded_by').notNull().references(() => sqliteUsers.id),
   gcsPath: text('gcs_path').notNull(),
@@ -182,7 +182,7 @@ export const pgFiles = pgTable('files', {
   originalName: varchar('original_name', { length: 255 }).notNull(),
   mimeType: varchar('mime_type', { length: 100 }).notNull(),
   size: bigint('size', { mode: 'number' }).notNull(),
-  category: varchar('category', { length: 50 }).notNull(),
+  category: varchar('category', { length: 50 }).notNull(), // remain same type
   siteId: varchar('site_id', { length: 255 }).notNull().references(() => pgSites.id, { onDelete: 'cascade' }),
   uploadedBy: varchar('uploaded_by', { length: 255 }).notNull().references(() => pgUsers.id),
   gcsPath: varchar('gcs_path', { length: 500 }).notNull(),

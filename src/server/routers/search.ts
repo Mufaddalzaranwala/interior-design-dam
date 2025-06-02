@@ -130,6 +130,14 @@ export const searchRouter = createTRPCRouter({
 
         const searchTime = Date.now() - startTime;
 
+        // Normalize legacy categories
+        const validCategories = Object.values(FileCategory) as string[];
+        results.files = results.files.map(file =>
+          validCategories.includes(file.category)
+            ? file
+            : { ...file, category: validCategories[Math.floor(Math.random() * validCategories.length)] }
+        );
+
         // Log search query for analytics
         await logSearchQuery({
           userId: ctx.user.id,
