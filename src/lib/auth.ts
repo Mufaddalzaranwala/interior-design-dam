@@ -185,7 +185,7 @@ export const deactivateUser = async (userId: string): Promise<boolean> => {
 
 // Session management
 export const setAuthCookie = async (token: string) => {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -195,9 +195,9 @@ export const setAuthCookie = async (token: string) => {
   });
 };
 
-export const getAuthCookie = (): string | null => {
+export const getAuthCookie = async (): Promise<string | null> => {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     return cookieStore.get(COOKIE_NAME)?.value || null;
   } catch (error) {
     // Cookies might not be available in all contexts
@@ -205,14 +205,14 @@ export const getAuthCookie = (): string | null => {
   }
 };
 
-export const clearAuthCookie = () => {
-  const cookieStore = cookies();
+export const clearAuthCookie = async () => {
+  const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
 };
 
 export const getCurrentUser = async (): Promise<AuthUser | null> => {
   try {
-    const token = getAuthCookie();
+    const token = await getAuthCookie();
     if (!token) {
       return null;
     }

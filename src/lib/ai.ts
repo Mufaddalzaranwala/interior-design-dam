@@ -88,11 +88,14 @@ export const analyzeImage = async (
     // Generate content
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
-    const text = response.text();
+    const rawText = await response.text();
+    const text = rawText.trim();
+    // Strip markdown code fences for JSON parsing
+    const jsonText = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
 
     // Parse JSON response
     try {
-      const analysisResult = JSON.parse(text);
+      const analysisResult = JSON.parse(jsonText);
       
       // Validate and clean the response
       const cleanedResult: AIAnalysisResult = {
@@ -125,7 +128,8 @@ export const analyzeImage = async (
       return cleanedResult;
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
-      console.error('AI Response:', text);
+      console.error('Original AI Response:', text);
+      console.error('Sanitized JSON:', jsonText);
       
       // Fallback to basic analysis
       return createFallbackAnalysis(filename, mimeType);

@@ -1,12 +1,18 @@
-import { Storage } from '@google-cloud/storage';
+import { Storage, StorageOptions } from '@google-cloud/storage';
 import { nanoid } from 'nanoid';
 import path from 'path';
 import sharp from 'sharp';
 
-const storage = new Storage({
+const storageConfig: StorageOptions = {
   projectId: process.env.GCS_PROJECT_ID,
-  keyFilename: process.env.GCS_KEY_FILE,
-});
+};
+
+// Use service account key locally or in development
+if (process.env.NODE_ENV !== 'production' && process.env.GCS_KEY_FILE) {
+  storageConfig.keyFilename = process.env.GCS_KEY_FILE;
+}
+
+const storage = new Storage(storageConfig);
 
 const bucketName = process.env.GCS_BUCKET_NAME;
 if (!bucketName) {

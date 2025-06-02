@@ -35,17 +35,30 @@ export default function DashboardPage() {
   
   const { data: uploadStats, isLoading: statsLoading } = trpc.files.getUploadStats.useQuery();
   
-  const { data: recentFiles, isLoading: filesLoading } = trpc.files.getFiles.useQuery({
+  const utils = trpc.useContext();
+  const {
+    data: recentFiles,
+    isLoading: filesLoading,
+    refetch: refetchFiles,
+  } = trpc.files.getFiles.useQuery({
     page: 1,
     limit: 6,
     sortBy: 'createdAt',
     sortOrder: 'desc',
   });
 
+  // Full files list for 'All Files' view using new allFiles procedure
+  const {
+    data: allFiles,
+    isLoading: allFilesLoading,
+  } = trpc.files.allFiles.useQuery(undefined, { enabled: selectedView === 'files' });
+
   const handleUploadComplete = (uploadedCount: number) => {
-    // Refetch data after successful upload
-    // The queries will automatically update due to tRPC caching
     console.log(`Successfully uploaded ${uploadedCount} files`);
+    // Refetch recent files
+    refetchFiles();
+    // Optionally refresh stats
+    utils.files.getUploadStats.invalidate();
   };
 
   if (sitesLoading || statsLoading) {
@@ -316,8 +329,8 @@ export default function DashboardPage() {
               </div>
               
               <FileGrid
-                files={recentFiles?.files || []}
-                isLoading={filesLoading}
+                files={allFiles?.files || []}
+                isLoading={allFilesLoading}
                 showActions={true}
                 viewMode="grid"
               />

@@ -7,6 +7,7 @@ import { canViewSite, canUploadToSite, getAccessibleSites } from '../../lib/perm
 import { uploadFile, generateSignedUrl, deleteFile, validateFile } from '../../lib/storage';
 import { analyzeImage, analyzeDocument } from '../../lib/ai';
 import { nanoid } from 'nanoid';
+import { db } from '../../lib/db';
 
 export const filesRouter = createTRPCRouter({
   // Upload file procedure
@@ -132,7 +133,8 @@ export const filesRouter = createTRPCRouter({
         siteId: z.string().optional(),
         category: z.nativeEnum(FileCategory).optional(),
         page: z.number().min(1).default(1),
-        limit: z.number().min(1).max(100).default(20),
+        // Increased max limit to allow larger fetches for 'All Files'
+        limit: z.number().min(1).max(1000).default(20),
         sortBy: z.enum(['createdAt', 'name', 'size']).default('createdAt'),
         sortOrder: z.enum(['asc', 'desc']).default('desc'),
       })
@@ -205,6 +207,28 @@ export const filesRouter = createTRPCRouter({
         page: input.page,
         limit: input.limit,
       };
+    }),
+
+  // Fetch all files without pagination
+  allFiles: protectedProcedure
+    .query(async ({ ctx }) => {
+      const accessibleSites = await getAccessibleSites(ctx.user.id);
+      const fileResults = await ctx.db
+        .select({
+          id: files.id,
+          filename: files.filename,
+          originalName: files.originalName,
+          mimeType: files.mimeType,
+          size: files.size,
+          category: files.category,
+          gcsPath: files.gcsPath,
+          thumbnailPath: files.thumbnailPath,
+          createdAt: files.createdAt,
+        })
+        .from(files)
+        .where(inArray(files.siteId, accessibleSites))
+        .orderBy(desc(files.createdAt));
+      return { files: fileResults };
     }),
 
   // Get file by ID
