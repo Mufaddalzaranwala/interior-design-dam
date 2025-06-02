@@ -30,6 +30,8 @@ export default function DashboardPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedView, setSelectedView] = useState<'overview' | 'files' | 'search'>('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Site filter for All Files view
+  const [siteFilter, setSiteFilter] = useState<string | undefined>(undefined);
 
   const { sites, uploadableSites, siteStats, isLoading: sitesLoading } = useSites();
   
@@ -51,7 +53,7 @@ export default function DashboardPage() {
   const {
     data: allFiles,
     isLoading: allFilesLoading,
-  } = trpc.files.allFiles.useQuery(undefined, { enabled: selectedView === 'files' });
+  } = trpc.files.allFiles.useQuery({ siteId: siteFilter }, { enabled: selectedView === 'files' });
 
   const handleUploadComplete = (uploadedCount: number) => {
     console.log(`Successfully uploaded ${uploadedCount} files`);
@@ -327,7 +329,20 @@ export default function DashboardPage() {
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">All Files</h2>
                 <p className="text-gray-600">Browse and manage your design assets</p>
               </div>
-              
+              <div className="mb-4 flex items-center space-x-2">
+                <label htmlFor="site-filter" className="text-sm font-medium text-gray-700">Site:</label>
+                <select
+                  id="site-filter"
+                  value={siteFilter ?? ''}
+                  onChange={(e) => setSiteFilter(e.target.value || undefined)}
+                  className="border border-gray-300 rounded p-1 text-sm"
+                >
+                  <option value="">All</option>
+                  {sites.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
               <FileGrid
                 files={allFiles?.files || []}
                 isLoading={allFilesLoading}

@@ -40,6 +40,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileWithDetails | null>(null);
   const [showFileModal, setShowFileModal] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
 
   const { sites } = useSites();
   
@@ -71,6 +72,19 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
 
   // Create share link mutation
   const shareLinkMutation = trpc.files.createShareLink.useMutation();
+
+  // Create view URL mutation
+  const viewUrlMutation = trpc.files.getViewUrl.useMutation();
+
+  useEffect(() => {
+    if (selectedFile?.thumbnailPath) {
+      viewUrlMutation.mutateAsync({ id: selectedFile.id, thumbnail: true })
+        .then(res => setThumbnailUrl(res.url))
+        .catch(() => setThumbnailUrl(null));
+    } else {
+      setThumbnailUrl(null);
+    }
+  }, [selectedFile]);
 
   const handleFileClick = (file: FileWithDetails) => {
     if (onFileSelect) {
@@ -113,6 +127,16 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
       alert('Share link copied to clipboard!');
     } catch (error) {
       console.error('Share failed:', error);
+    }
+  };
+
+  // Generate view URL and open in new tab
+  const handleView = async (file: FileWithDetails, thumbnail = false) => {
+    try {
+      const result = await viewUrlMutation.mutateAsync({ id: file.id, thumbnail });
+      window.open(result.url, '_blank');
+    } catch (error) {
+      console.error('View failed:', error);
     }
   };
 
@@ -534,6 +558,11 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
           title={selectedFile.originalName}
           size="lg"
         >
+          {thumbnailUrl && (
+            <div className="mb-4 text-center">
+              <img src={thumbnailUrl} alt="Thumbnail" className="mx-auto max-h-40 object-contain" />
+            </div>
+          )}
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -588,6 +617,14 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
               >
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleView(selectedFile)}
+                disabled={viewUrlMutation.isLoading}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                View
               </Button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Grid, 
   List, 
@@ -75,12 +75,29 @@ export const FileGrid: React.FC<FileGridProps> = ({
   const [showFileModal, setShowFileModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<FileWithDetails | null>(null);
+  const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
 
   // Generate download URL mutation
   const downloadUrlMutation = trpc.files.getDownloadUrl.useMutation();
 
   // Create share link mutation
   const shareLinkMutation = trpc.files.createShareLink.useMutation();
+
+  // Create view URL mutation
+  const viewUrlMutation = trpc.files.getViewUrl.useMutation();
+
+  useEffect(() => {
+    files.forEach(async file => {
+      if (file.thumbnailPath && !thumbUrls[file.id]) {
+        try {
+          const res = await viewUrlMutation.mutateAsync({ id: file.id, thumbnail: true });
+          setThumbUrls(prev => ({ ...prev, [file.id]: res.url }));
+        } catch {
+          // ignore errors
+        }
+      }
+    });
+  }, [files]);
 
   // Sort files based on current sort settings
   const sortedFiles = useMemo(() => {
@@ -199,6 +216,15 @@ export const FileGrid: React.FC<FileGridProps> = ({
       alert('Share link copied to clipboard!');
     } catch (error) {
       console.error('Share failed:', error);
+    }
+  };
+
+  const handleView = async (file: FileWithDetails, thumbnail = false) => {
+    try {
+      const result = await viewUrlMutation.mutateAsync({ id: file.id, thumbnail });
+      window.open(result.url, '_blank');
+    } catch (error) {
+      console.error('View failed:', error);
     }
   };
 
@@ -371,13 +397,15 @@ export const FileGrid: React.FC<FileGridProps> = ({
                   'flex items-center justify-center bg-gray-50 rounded-lg mb-3',
                   compact ? 'h-24' : 'h-32'
                 )}>
-                  {file.thumbnailPath ? (
+                  {thumbUrls[file.id] ? (
                     <img
-                      src={`/api/files/thumbnail/${file.id}`}
+                      src={thumbUrls[file.id]}
                       alt={file.originalName}
                       className="max-h-full max-w-full object-contain rounded"
                       loading="lazy"
                     />
+                  ) : file.thumbnailPath ? (
+                    <div className="text-sm text-gray-500">Loading...</div>
                   ) : (
                     <div className="text-4xl">{getFileIcon(file)}</div>
                   )}
@@ -443,7 +471,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
                           e.stopPropagation();
                           handleShare(file);
                         }}
-                        disabled={downloadUrlMutation.isLoading}
+                        disabled={shareLinkMutation.isLoading}
                         className="h-7 w-7 p-0"
                       >
                         <Share2 className="w-3 h-3" />
@@ -553,7 +581,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
                           e.stopPropagation();
                           handleShare(file);
                         }}
-                        disabled={downloadUrlMutation.isLoading}
+                        disabled={shareLinkMutation.isLoading}
                         className="h-8 w-8 p-0"
                       >
                         <Share2 className="w-4 h-4" />
@@ -601,6 +629,11 @@ export const FileGrid: React.FC<FileGridProps> = ({
           title="File Details"
           size="lg"
         >
+          {thumbUrls[selectedFile.id] && (
+            <div className="mb-4 text-center">
+              <img src={thumbUrls[selectedFile.id]} alt="Thumbnail" className="mx-auto max-h-40 object-contain" />
+            </div>
+          )}
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div><span className="font-medium">Name:</span> {selectedFile.originalName}</div>
@@ -646,9 +679,13 @@ export const FileGrid: React.FC<FileGridProps> = ({
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </Button>
-              <Button variant="outline" onClick={() => handleShare(selectedFile)}>
+              <Button variant="outline" onClick={() => handleShare(selectedFile)} disabled={shareLinkMutation.isLoading}>
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
+              </Button>
+              <Button variant="outline" onClick={() => handleView(selectedFile)} disabled={viewUrlMutation.isLoading}>
+                <Eye className="w-4 h-4 mr-2" />
+                View
               </Button>
             </div>
           </div>

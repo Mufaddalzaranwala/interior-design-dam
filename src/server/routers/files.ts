@@ -209,24 +209,35 @@ export const filesRouter = createTRPCRouter({
       };
     }),
 
-  // Fetch all files without pagination
+  // Fetch all files without pagination, optional site filter
   allFiles: protectedProcedure
-    .query(async ({ ctx }) => {
+    .input(z.object({ siteId: z.string().optional() }).default({}))
+    .query(async ({ input, ctx }) => {
       const accessibleSites = await getAccessibleSites(ctx.user.id);
+      // Narrow sites if filter provided and accessible
+      const siteFilter = input.siteId && accessibleSites.includes(input.siteId)
+        ? [input.siteId]
+        : accessibleSites;
       const fileResults = await ctx.db
-        .select({
-          id: files.id,
-          filename: files.filename,
-          originalName: files.originalName,
-          mimeType: files.mimeType,
-          size: files.size,
-          category: files.category,
-          gcsPath: files.gcsPath,
-          thumbnailPath: files.thumbnailPath,
-          createdAt: files.createdAt,
+        .select({ 
+          id: files.id, 
+          filename: files.filename, 
+          originalName: files.originalName, 
+          mimeType: files.mimeType, 
+          size: files.size, 
+          category: files.category, 
+          siteId: files.siteId, 
+          uploadedBy: files.uploadedBy, 
+          gcsPath: files.gcsPath, 
+          thumbnailPath: files.thumbnailPath, 
+          aiDescription: files.aiDescription, 
+          aiTags: files.aiTags, 
+          processingStatus: files.processingStatus, 
+          createdAt: files.createdAt, 
+          updatedAt: files.updatedAt 
         })
         .from(files)
-        .where(inArray(files.siteId, accessibleSites))
+        .where(inArray(files.siteId, siteFilter))
         .orderBy(desc(files.createdAt));
       return { files: fileResults };
     }),
@@ -262,8 +273,8 @@ export const filesRouter = createTRPCRouter({
 
   // Generate download URL
   getDownloadUrl: protectedProcedure
-    .input(z.object({ 
-      id: z.string(), 
+    .input(z.object({
+      id: z.string(),
       thumbnail: z.boolean().default(false),
       expiresInHours: z.number().min(1).max(168).default(24), // in hours
     }))
@@ -310,6 +321,37 @@ export const filesRouter = createTRPCRouter({
           message: 'Failed to generate download URL',
         });
       }
+    }),
+
+  // Generate a short-lived view URL valid for 5 minutes
+  getViewUrl: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      thumbnail: z.boolean().default(false),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const [file] = await ctx.db
+        .select()
+        .from(files)
+        .where(eq(files.id, input.id))
+        .limit(1);
+
+      if (!file) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'File not found',
+        });
+      }
+
+      const path = input.thumbnail && file.thumbnailPath ? file.thumbnailPath : file.gcsPath;
+      const signedUrl = await generateSignedUrl(path, 'read', 5 * 60 * 1000); // 5 minutes
+
+      return {
+        url: signedUrl,
+        filename: file.originalName,
+        size: file.size,
+        mimeType: file.mimeType,
+      };
     }),
 
   // Create shareable link
