@@ -8,39 +8,27 @@ import { migrate as migratePg } from 'drizzle-orm/postgres-js/migrator';
 import path from 'path';
 import fs from 'fs';
 
-const isLocal = process.env.NODE_ENV === 'development';
+// Raw DB client for direct SQL operations
+let rawClient: any;
 
+// Driver client for queries
 let db: ReturnType<typeof drizzle> | ReturnType<typeof drizzlePg>;
 
-if (isLocal) {
-  // LibSQL setup for local development (compatible with all Node.js versions)
-  const dbPath = path.join(process.cwd(), 'database', 'local.db');
-  
-  // Ensure database directory exists
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
+const isLocal = process.env.NODE_ENV === 'development';
 
-  const client = createClient({
-    url: `file:${dbPath}`
-  });
-  
-  db = drizzle(client, { schema });
+if (isLocal) {
+  // LibSQL setup for local development
+  const dbPath = path.join(process.cwd(), 'database', 'local.db');
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+  rawClient = createClient({ url: `file:${dbPath}` });
+  db = drizzle(rawClient, { schema });
 } else {
   // PostgreSQL setup for production
   const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error('DATABASE_URL environment variable is required for production');
-  }
-
-  const client = postgres(connectionString, {
-    max: 10,
-    idle_timeout: 20,
-    connect_timeout: 10,
-  });
-
-  db = drizzlePg(client, { schema });
+  if (!connectionString) throw new Error('DATABASE_URL environment variable is required');
+  rawClient = postgres(connectionString, { max:10, idle_timeout:20, connect_timeout:10 });
+  db = drizzlePg(rawClient, { schema });
 }
 
 // Database utilities
@@ -68,10 +56,9 @@ export const runMigrations = async () => {
 
 // Full-text search utilities
 export const searchFiles = async (query: string, siteIds: string[] = []) => {
+  const client = rawClient;
   if (isLocal) {
     // LibSQL search (basic text search, FTS5 setup is more complex)
-    const client = (db as any).client;
-    
     const siteFilter = siteIds.length > 0 
       ? `AND site_id IN (${siteIds.map(() => '?').join(',')})`
       : '';
@@ -99,7 +86,6 @@ export const searchFiles = async (query: string, siteIds: string[] = []) => {
     return result.rows;
   } else {
     // PostgreSQL full-text search
-    const client = (db as any).client;
     const siteFilter = siteIds.length > 0 
       ? `AND site_id = ANY($${siteIds.length + 1})`
       : '';
@@ -124,14 +110,10 @@ export const searchFiles = async (query: string, siteIds: string[] = []) => {
 
 // Health check
 export const checkConnection = async (): Promise<boolean> => {
+  const client = rawClient;
   try {
-    if (isLocal) {
-      const client = (db as any).client;
-      await client.execute('SELECT 1');
-    } else {
-      const client = (db as any).client;
-      await client`SELECT 1`;
-    }
+    if (isLocal) await client.execute('SELECT 1');
+    else await client`SELECT 1`;
     return true;
   } catch (error) {
     console.error('Database connection check failed:', error);
@@ -141,13 +123,9 @@ export const checkConnection = async (): Promise<boolean> => {
 
 // Close connection (for cleanup)
 export const closeConnection = () => {
-  if (isLocal) {
-    const client = (db as any).client;
-    client.close();
-  } else {
-    const client = (db as any).client;
-    client.end();
-  }
+  const client = rawClient;
+  if (isLocal) client.close();
+  else client.end();
 };
 
 export { db };

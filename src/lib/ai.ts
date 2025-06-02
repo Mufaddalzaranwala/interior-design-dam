@@ -88,14 +88,15 @@ export const analyzeImage = async (
     // Generate content
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
-    const rawText = await response.text();
-    const text = rawText.trim();
-    // Strip markdown code fences for JSON parsing
-    const jsonText = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
+    const raw = await response.text();
+    let text = raw.trim();
+    if (text.startsWith('```')) {
+      text = text.replace(/^```(?:json)?\r?\n?/, '').replace(/```$/, '').trim();
+    }
 
     // Parse JSON response
     try {
-      const analysisResult = JSON.parse(jsonText);
+      const analysisResult = JSON.parse(text);
       
       // Validate and clean the response
       const cleanedResult: AIAnalysisResult = {
@@ -123,13 +124,12 @@ export const analyzeImage = async (
 
       // Add filename-based tags
       const filenameTags = extractFilenameKeywords(filename);
-      cleanedResult.tags = [...new Set([...cleanedResult.tags, ...filenameTags])];
+      cleanedResult.tags = Array.from(new Set([...cleanedResult.tags, ...filenameTags]));
 
       return cleanedResult;
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       console.error('Original AI Response:', text);
-      console.error('Sanitized JSON:', jsonText);
       
       // Fallback to basic analysis
       return createFallbackAnalysis(filename, mimeType);
@@ -231,7 +231,7 @@ export const analyzeDocument = async (
 
     return {
       description: `${documentType}: ${filename}`,
-      tags: [...new Set([...filenameTags, ...additionalTags])],
+      tags: Array.from(new Set([...filenameTags, ...additionalTags])),
       confidence: 0.7,
     };
   } catch (error) {
@@ -313,7 +313,19 @@ Response format: [{"index": 0, "score": 0.85}, {"index": 2, "score": 0.67}]
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
+    const raw = await response.text();
+    let text = raw.trim();
+
+    // Strip markdown fences: prefer extracting fenced JSON first
+    const fenceMatch = text.match(/```(?:json)?\r?\n([\s\S]*?)```/);
+    if (fenceMatch) {
+      text = fenceMatch[1].trim();
+    } else if (text.startsWith('```')) {
+      text = text.replace(/^```(?:json)?\r?\n?/, '').replace(/```$/, '').trim();
+    }
+
+    // Remove any remaining backticks
+    text = text.replace(/`/g, '');
 
     try {
       const scores = JSON.parse(text);
