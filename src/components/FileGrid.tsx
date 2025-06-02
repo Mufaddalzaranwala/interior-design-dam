@@ -162,12 +162,40 @@ export const FileGrid: React.FC<FileGridProps> = ({
     }
 
     try {
-      const result = await shareLinkMutation.mutateAsync({
-        fileId: file.id,
-        expiresInHours: 24,
+      const result = await downloadUrlMutation.mutateAsync({
+        id: file.id,
+        thumbnail: false,
       });
-      
-      await navigator.clipboard.writeText(result.url);
+      const url = result.url;
+      // Try Clipboard API, with fallback on error or absence
+      const writeTextFn = navigator.clipboard?.writeText;
+      if (typeof writeTextFn === 'function') {
+        try {
+          await writeTextFn.call(navigator.clipboard, url);
+        } catch {
+          // Fallback to textarea copy
+          const textarea = document.createElement('textarea');
+          textarea.value = url;
+          textarea.style.position = 'fixed';
+          textarea.style.left = '-9999px';
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+      } else {
+        // Clipboard API unavailable, use textarea fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
       alert('Share link copied to clipboard!');
     } catch (error) {
       console.error('Share failed:', error);
@@ -415,7 +443,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
                           e.stopPropagation();
                           handleShare(file);
                         }}
-                        disabled={shareLinkMutation.isLoading}
+                        disabled={downloadUrlMutation.isLoading}
                         className="h-7 w-7 p-0"
                       >
                         <Share2 className="w-3 h-3" />
@@ -525,7 +553,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
                           e.stopPropagation();
                           handleShare(file);
                         }}
-                        disabled={shareLinkMutation.isLoading}
+                        disabled={downloadUrlMutation.isLoading}
                         className="h-8 w-8 p-0"
                       >
                         <Share2 className="w-4 h-4" />

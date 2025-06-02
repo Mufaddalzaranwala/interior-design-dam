@@ -263,8 +263,9 @@ export const filesRouter = createTRPCRouter({
   // Generate download URL
   getDownloadUrl: protectedProcedure
     .input(z.object({ 
-      id: z.string(),
+      id: z.string(), 
       thumbnail: z.boolean().default(false),
+      expiresInHours: z.number().min(1).max(168).default(24), // in hours
     }))
     .mutation(async ({ input, ctx }) => {
       const [file] = await ctx.db
@@ -294,7 +295,7 @@ export const filesRouter = createTRPCRouter({
           ? file.thumbnailPath 
           : file.gcsPath;
           
-        const signedUrl = await generateSignedUrl(path, 'read', 3600000); // 1 hour
+        const signedUrl = await generateSignedUrl(path, 'read', input.expiresInHours * 60 * 60 * 1000);
 
         return {
           url: signedUrl,
