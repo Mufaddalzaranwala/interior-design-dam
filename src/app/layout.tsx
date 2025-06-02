@@ -10,8 +10,14 @@ export const metadata: Metadata = {
   description: 'AI-powered digital asset management for interior design firms',
   keywords: ['interior design', 'digital asset management', 'AI', 'file management'],
   authors: [{ name: 'Interior Design DAM' }],
-  viewport: 'width=device-width, initial-scale=1',
 };
+
+export function generateViewport() {
+  return {
+    width: 'device-width',
+    initialScale: 1,
+  };
+}
 
 export default function RootLayout({
   children,
