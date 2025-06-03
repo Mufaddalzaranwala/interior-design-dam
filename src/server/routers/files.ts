@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { eq, and, desc, inArray, sql } from 'drizzle-orm';
 import { createTRPCRouter, protectedProcedure, adminProcedure } from '../trpc';
-import { files, sharedLinks, FileCategory, ProcessingStatus } from '../../../database/schema';
+import { files, sharedLinks, FileCategory, ProcessingStatus, sites } from '../../../database/schema';
 import { canViewSite, canUploadToSite, getAccessibleSites } from '../../lib/permissions';
 import { uploadFile, generateSignedUrl, deleteFile, validateFile } from '../../lib/storage';
 import { analyzeImage, analyzeDocument } from '../../lib/ai';
@@ -627,12 +627,22 @@ async function processFileAsync(
         .where(eq(files.id, fileId));
     } else {
       // Processing succeeded
+      // fetch site info and enrich with site and client names before updating tags
+      const siteInfo = await db
+        .select({ siteName: sites.name, clientName: sites.clientName })
+        .from(files)
+        .innerJoin(sites, eq(files.siteId, sites.id))
+        .where(eq(files.id, fileId))
+        .get();
+      const enrichedTags = Array.isArray(result.tags)
+        ? [...result.tags, siteInfo.siteName, siteInfo.clientName]
+        : [siteInfo.siteName, siteInfo.clientName];
       await db
         .update(files)
         .set({ 
           processingStatus: ProcessingStatus.COMPLETED,
           aiDescription: result.description,
-          aiTags: JSON.stringify(result.tags),
+          aiTags: JSON.stringify(enrichedTags),
           metadata: JSON.stringify(result),
           updatedAt: new Date(),
         })

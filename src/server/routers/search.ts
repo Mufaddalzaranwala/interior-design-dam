@@ -192,8 +192,11 @@ export const searchRouter = createTRPCRouter({
             originalName: files.originalName,
             aiDescription: files.aiDescription,
             aiTags: files.aiTags,
+            siteName: sites.name,
+            clientName: sites.clientName,
           })
           .from(files)
+          .innerJoin(sites, eq(files.siteId, sites.id))
           .where(
             and(
               inArray(files.siteId, accessibleSites),
@@ -237,6 +240,15 @@ export const searchRouter = createTRPCRouter({
             } catch (e) {
               // Ignore JSON parse errors
             }
+          }
+
+          // Add site name as suggestion
+          if (file.siteName && file.siteName.toLowerCase().includes(input.query.toLowerCase())) {
+            suggestionSet.add(file.siteName);
+          }
+          // Add client name as suggestion
+          if (file.clientName && file.clientName.toLowerCase().includes(input.query.toLowerCase())) {
+            suggestionSet.add(file.clientName);
           }
         });
 
