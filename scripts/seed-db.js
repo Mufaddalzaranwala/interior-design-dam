@@ -345,7 +345,12 @@ function createSampleFiles(client, users, sites) {
         uploadedBy: uploader.id,
         gcsPath,
         aiDescription: sampleFile.aiDescription,
-        aiTags: sampleFile.aiTags,
+        // Add site name and client name to tags for search
+        aiTags: JSON.stringify([
+          ...JSON.parse(sampleFile.aiTags),
+          site.name,
+          site.clientName
+        ]),
         processingStatus: 'completed',
         createdAt,
         updatedAt: createdAt,
